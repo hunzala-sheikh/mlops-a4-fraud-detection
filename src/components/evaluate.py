@@ -77,9 +77,13 @@ def evaluate_model(
     fig, ax = plt.subplots(figsize=(4, 3.5))
     sns.heatmap(cm, annot=True, fmt="d", cmap="Reds",
                 xticklabels=["legit", "fraud"], yticklabels=["legit", "fraud"], ax=ax)
-    ax.set_xlabel("Predicted"); ax.set_ylabel("True")
+    ax.set_xlabel("Predicted")
+    ax.set_ylabel("True")
     ax.set_title(f"Confusion Matrix - {bundle.get('model_type', '?')}")
-    buf = io.BytesIO(); fig.tight_layout(); fig.savefig(buf, format="png", dpi=120); plt.close(fig)
+    buf = io.BytesIO()
+    fig.tight_layout()
+    fig.savefig(buf, format="png", dpi=120)
+    plt.close(fig)
     png_b64 = base64.b64encode(buf.getvalue()).decode("ascii")
 
     html = (
