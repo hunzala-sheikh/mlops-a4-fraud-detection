@@ -1,0 +1,83 @@
+[
+  {
+    "config": {
+      "model_type": "xgboost",
+      "imbalance_strategy": "none",
+      "cost_sensitive": false,
+      "fn_penalty": 5.0,
+      "scale_pos_weight": 1.0,
+      "time_based_split": false
+    },
+    "n_train": 40000,
+    "n_test": 10000,
+    "train_fraud_rate": 0.0515,
+    "test_fraud_rate": 0.0515,
+    "accuracy": 0.9768,
+    "precision": 0.9077809798270894,
+    "recall": 0.6116504854368932,
+    "f1": 0.7308584686774942,
+    "auc_roc": 0.8042059255544012,
+    "ap": 0.6040871440167436,
+    "tn": 9453,
+    "fp": 32,
+    "fn": 200,
+    "tp": 315,
+    "business_cost_usd": 201600.0,
+    "fraud_loss_usd": 200000.0,
+    "false_alarm_cost_usd": 1600.0
+  },
+  {
+    "config": {
+      "model_type": "lightgbm",
+      "imbalance_strategy": "none",
+      "cost_sensitive": false,
+      "fn_penalty": 5.0,
+      "scale_pos_weight": 1.0,
+      "time_based_split": false
+    },
+    "n_train": 40000,
+    "n_test": 10000,
+    "train_fraud_rate": 0.0515,
+    "test_fraud_rate": 0.0515,
+    "accuracy": 0.9767,
+    "precision": 0.9051724137931034,
+    "recall": 0.6116504854368932,
+    "f1": 0.7300115874855156,
+    "auc_roc": 0.8096475272658414,
+    "ap": 0.609888561413576,
+    "tn": 9452,
+    "fp": 33,
+    "fn": 200,
+    "tp": 315,
+    "business_cost_usd": 201650.0,
+    "fraud_loss_usd": 200000.0,
+    "false_alarm_cost_usd": 1650.0
+  },
+  {
+    "config": {
+      "model_type": "rf_fs",
+      "imbalance_strategy": "none",
+      "cost_sensitive": false,
+      "fn_penalty": 5.0,
+      "scale_pos_weight": 1.0,
+      "time_based_split": false
+    },
+    "n_train": 40000,
+    "n_test": 10000,
+    "train_fraud_rate": 0.0515,
+    "test_fraud_rate": 0.0515,
+    "accuracy": 0.9768,
+    "precision": 0.9077809798270894,
+    "recall": 0.6116504854368932,
+    "f1": 0.7308584686774942,
+    "auc_roc": 0.8061638458270851,
+    "ap": 0.6074875610229371,
+    "tn": 9453,
+    "fp": 32,
+    "fn": 200,
+    "tp": 315,
+    "business_cost_usd": 201600.0,
+    "fraud_loss_usd": 200000.0,
+    "false_alarm_cost_usd": 1600.0
+  }
+]

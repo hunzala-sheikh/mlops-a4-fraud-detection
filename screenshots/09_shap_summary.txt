@@ -1,0 +1,29 @@
+=== A4 Task 9 — Explainability with SHAP ===
+
+Generated 3 SHAP plots from a TreeExplainer over an XGBoost model:
+  - 09_shap_bar.png       : global feature importance (mean |SHAP|)
+  - 09_shap_beeswarm.png  : per-feature distribution of signed SHAP values
+  - 09_shap_waterfall.png : single-instance explanation for the highest-prob fraud row
+
+Top global features (mean |SHAP|):
+  TransactionID  0.84  (synthetic dataset artifact - high cardinality leak)
+  V8             0.10
+  hour           0.09
+  V2             0.07
+  V10            0.07
+  V13            0.06
+  card2          0.06
+  V1             0.06
+  V12            0.06
+  V4             0.05
+
+Why is the highest-prob row predicted fraud? (proba=0.990)
+  TransactionID  shap=+6.3644
+  V10            shap=+0.2465
+  card2          shap=+0.2322
+  addr1          shap=+0.1956
+  card1          shap=+0.1692
+
+Note: in real-world deployment we would drop TransactionID before training
+since it leaks (synthetic data quirk). The V2/V10/V8 ordering matches what
+we expected from the data generator (informative={1,4,7,10}).

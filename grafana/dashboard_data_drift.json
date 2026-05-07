@@ -1,0 +1,81 @@
+{
+  "title": "Fraud — Data Drift",
+  "uid": "fraud-drift",
+  "tags": ["mlops", "fraud", "drift"],
+  "schemaVersion": 39,
+  "refresh": "1m",
+  "time": {"from": "now-12h", "to": "now"},
+  "panels": [
+    {
+      "type": "timeseries",
+      "title": "Missing fields per request (p50 / p95)",
+      "gridPos": {"x": 0, "y": 0, "w": 12, "h": 7},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [
+        {"expr": "histogram_quantile(0.50, rate(fraud_api_missing_features_bucket[15m]))", "legendFormat": "p50"},
+        {"expr": "histogram_quantile(0.95, rate(fraud_api_missing_features_bucket[15m]))", "legendFormat": "p95"}
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {"value": null, "color": "green"},
+              {"value": 5, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "alertlist",
+      "title": "Drift / Recall alerts (firing)",
+      "gridPos": {"x": 12, "y": 0, "w": 12, "h": 7},
+      "options": {
+        "stateFilter": {"firing": true, "pending": true},
+        "groupMode": "default",
+        "alertName": "Fraud"
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Mean predicted probability drift from baseline (0.05)",
+      "gridPos": {"x": 0, "y": 7, "w": 12, "h": 7},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "(rate(fraud_api_predicted_probability_sum[10m]) / rate(fraud_api_predicted_probability_count[10m])) - 0.05",
+        "legendFormat": "drift_from_baseline"
+      }]
+    },
+    {
+      "type": "timeseries",
+      "title": "Feature distribution drift (PSI per top feature)",
+      "gridPos": {"x": 12, "y": 7, "w": 12, "h": 7},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "fraud_api_feature_psi",
+        "legendFormat": "{{feature}}"
+      }],
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "steps": [
+              {"value": null, "color": "green"},
+              {"value": 0.10, "color": "yellow"},
+              {"value": 0.25, "color": "red"}
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Input data anomalies (out-of-range values per minute)",
+      "gridPos": {"x": 0, "y": 14, "w": 24, "h": 6},
+      "datasource": {"type": "prometheus", "uid": "prometheus"},
+      "targets": [{
+        "expr": "rate(fraud_api_input_anomalies_total[5m])",
+        "legendFormat": "{{kind}}"
+      }]
+    }
+  ]
+}

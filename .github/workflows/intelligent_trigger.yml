@@ -1,0 +1,60 @@
+name: Intelligent Trigger - Auto-Retrain
+
+on:
+  repository_dispatch:
+    types:
+      - prometheus_alert
+      - drift_detected
+      - performance_degradation
+  schedule:
+    # Daily safety net: if monitoring missed something, run anyway
+    - cron: '0 4 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for retrain (alert | drift | manual)'
+        required: false
+        default: 'manual'
+
+jobs:
+  retrain:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: Log alert metadata
+        env:
+          REASON:        ${{ github.event.client_payload.alertname || github.event.inputs.reason || 'scheduled' }}
+          SEVERITY:      ${{ github.event.client_payload.severity || 'info' }}
+          SOURCE:        ${{ github.event_name }}
+        run: |
+          echo "Retrain triggered: reason=$REASON severity=$SEVERITY source=$SOURCE"
+          echo "$REASON" > /tmp/reason.txt
+
+      - name: Trigger CD pipeline
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'cd.yml',
+              ref: 'main',
+              inputs: {
+                model_type: 'xgboost',
+                auc_threshold: '0.85',
+              },
+            });
+
+      - name: Notify Slack (optional)
+        if: always()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+          REASON: ${{ github.event.client_payload.alertname || 'manual' }}
+        run: |
+          if [ -n "$SLACK_WEBHOOK" ]; then
+            curl -X POST -H 'Content-type: application/json' \
+              --data "{\"text\":\"Auto-retrain triggered: $REASON\"}" \
+              "$SLACK_WEBHOOK"
+          fi

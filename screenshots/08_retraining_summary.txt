@@ -1,0 +1,17 @@
+=== A4 Task 8 — Intelligent Retraining Strategy ===
+
+5 sliding windows of 10k rows each. Strategies:
+
+| strategy    | retrains | mean_auc | std_auc | cost_credits | compute_s |
+|-------------|----------|----------|---------|--------------|-----------|
+| threshold   |    1     |  0.8137  | 0.0154  |       5      |   0.3     |
+| periodic    |    4     |  0.8140  | 0.0207  |      20      |   0.9     |
+| hybrid      |    3     |  0.8175  | 0.0189  |      15      |   0.7     |
+
+Take-away:
+  - Threshold-only retraining was 4x cheaper than periodic, with 0.0003
+    AUC penalty - the most efficient on this stable dataset.
+  - Hybrid achieved highest mean AUC (0.8175) with only 3 retrains,
+    catching one drift event the pure-threshold strategy missed.
+  - Recommendation: hybrid (periodic + threshold) for production - balances
+    cost-efficiency with safety net against missed drift.

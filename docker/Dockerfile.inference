@@ -1,0 +1,24 @@
+# Inference REST API for the fraud model.
+FROM python:3.11-slim
+
+ENV OMP_NUM_THREADS=1 \
+    PYTHONUNBUFFERED=1 \
+    MODEL_PATH=/models/deployed_model.pkl \
+    MODEL_VERSION=v1.0.0
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends libgomp1 && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-inference.txt .
+RUN pip install --no-cache-dir -r requirements-inference.txt
+
+COPY src/inference/ ./src/inference/
+COPY src/__init__.py ./src/__init__.py
+
+# Bake the trained model into the image (production would mount a PVC or
+# pull from a model registry; this is fine for the assignment).
+COPY artifacts/deployed_model.pkl /models/deployed_model.pkl
+
+EXPOSE 8000
+CMD ["uvicorn", "src.inference.api:app", "--host", "0.0.0.0", "--port", "8000"]

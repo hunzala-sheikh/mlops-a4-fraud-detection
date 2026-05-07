@@ -1,0 +1,64 @@
+=== A4 Task 1 — k8s Environment Setup Evidence (real cluster, 2026-05-07) ===
+
+## minikube status
+minikube
+type: Control Plane
+host: Running
+kubelet: Running
+apiserver: Running
+kubeconfig: Configured
+
+
+## Cluster nodes
+NAME       STATUS   ROLES           AGE   VERSION   INTERNAL-IP    EXTERNAL-IP   OS-IMAGE                         KERNEL-VERSION      CONTAINER-RUNTIME
+minikube   Ready    control-plane   38m   v1.29.7   192.168.49.2   <none>        Debian GNU/Linux 12 (bookworm)   6.17.0-22-generic   docker://29.2.1
+
+## Namespace fraud-experiments (isolated workspace)
+NAME                STATUS   AGE
+fraud-experiments   Active   37m
+
+## ResourceQuota
+Name:                   fraud-quota
+Namespace:              fraud-experiments
+Resource                Used  Hard
+--------                ----  ----
+limits.cpu              2     12
+limits.memory           2Gi   12Gi
+persistentvolumeclaims  3     5
+pods                    3     30
+requests.cpu            650m  8
+requests.memory         1Gi   8Gi
+
+## LimitRange
+Name:       fraud-limits
+Namespace:  fraud-experiments
+Type        Resource  Min  Max  Default Request  Default Limit  Max Limit/Request Ratio
+----        --------  ---  ---  ---------------  -------------  -----------------------
+Container   cpu       -    -    250m             1              -
+Container   memory    -    -    256Mi            1Gi            -
+
+## Persistent Volume Claims
+NAME                  STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   VOLUMEATTRIBUTESCLASS   AGE
+fraud-artifacts-pvc   Bound    pvc-23f7a927-1974-437b-9203-84b7f214decb   5Gi        RWO            standard       <unset>                 37m
+fraud-data-pvc        Bound    pvc-ff07a1a4-d79c-4814-8244-bd11d168d3d9   5Gi        RWO            standard       <unset>                 37m
+fraud-models-pvc      Bound    pvc-3eb7c372-1676-42f5-bdea-ce4d92ccfa36   2Gi        RWO            standard       <unset>                 37m
+
+## Pods running in namespace
+NAME                                   READY   STATUS    RESTARTS   AGE
+pod/fraud-inference-79b8df47cc-wss96   1/1     Running   0          32m
+pod/grafana-77b7d77fcb-55fxv           1/1     Running   0          11m
+pod/prometheus-6d9d466b84-w4tjk        1/1     Running   0          30m
+
+NAME                      TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)    AGE
+service/fraud-inference   ClusterIP   10.107.221.192   <none>        8000/TCP   32m
+service/grafana           ClusterIP   10.106.101.169   <none>        3000/TCP   30m
+service/prometheus        ClusterIP   10.110.58.236    <none>        9090/TCP   30m
+
+## Prometheus target health (fraud-inference must be UP)
+  fraud-inference-api       up     last_scrape_err=-
+  prometheus                up     last_scrape_err=-
+
+## Compiled KFP pipelines
+total 92K
+-rw-rw-r-- 1 hunzala hunzala 45K Apr 26 13:02 fraud_pipeline_drift.yaml
+-rw-rw-r-- 1 hunzala hunzala 43K May  7 07:10 fraud_pipeline.yaml

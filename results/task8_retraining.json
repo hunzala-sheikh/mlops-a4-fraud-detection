@@ -1,0 +1,82 @@
+[
+  {
+    "strategy": "threshold",
+    "n_retrains": 1,
+    "cost_credits": 5.0,
+    "compute_seconds": 0.34,
+    "mean_auc": 0.8137272602559007,
+    "std_auc": 0.015373832263704023,
+    "auc_per_window": [
+      0.806915573073895,
+      0.8275531552835015,
+      0.8287034577489715,
+      0.7917368549172347
+    ],
+    "retrained_at": [
+      {
+        "window": 1,
+        "reason": "initial"
+      }
+    ]
+  },
+  {
+    "strategy": "periodic",
+    "n_retrains": 4,
+    "cost_credits": 20.0,
+    "compute_seconds": 0.94,
+    "mean_auc": 0.8140092617329407,
+    "std_auc": 0.020653374036099792,
+    "auc_per_window": [
+      0.806915573073895,
+      0.8444010463698528,
+      0.817540230311774,
+      0.7871801971762414
+    ],
+    "retrained_at": [
+      {
+        "window": 1,
+        "reason": "initial"
+      },
+      {
+        "window": 2,
+        "reason": "periodic"
+      },
+      {
+        "window": 3,
+        "reason": "periodic"
+      },
+      {
+        "window": 4,
+        "reason": "periodic"
+      }
+    ]
+  },
+  {
+    "strategy": "hybrid",
+    "n_retrains": 3,
+    "cost_credits": 15.0,
+    "compute_seconds": 0.72,
+    "mean_auc": 0.817509675874798,
+    "std_auc": 0.018911009963015903,
+    "auc_per_window": [
+      0.806915573073895,
+      0.8444010463698528,
+      0.8245650530590143,
+      0.7941570309964296
+    ],
+    "retrained_at": [
+      {
+        "window": 1,
+        "reason": "initial"
+      },
+      {
+        "window": 2,
+        "reason": "hybrid"
+      },
+      {
+        "window": 4,
+        "reason": "hybrid"
+      }
+    ]
+  }
+]

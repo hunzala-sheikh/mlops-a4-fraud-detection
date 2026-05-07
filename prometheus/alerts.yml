@@ -1,0 +1,86 @@
+# A4 Task 6.D: Alert rules for fraud-detection observability.
+# Each rule includes a label "trigger_retrain=true" so Alertmanager
+# can fire a webhook to GitHub Actions repository_dispatch and
+# auto-trigger the retrain workflow (Task 5 integration).
+
+groups:
+  - name: fraud-system
+    interval: 30s
+    rules:
+      - alert: HighAPILatency
+        expr: histogram_quantile(0.95, rate(fraud_api_latency_seconds_bucket[5m])) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+          trigger_retrain: "false"
+        annotations:
+          summary: "Inference API p95 latency > 500ms"
+          description: "p95 = {{ $value | humanizeDuration }}"
+
+      - alert: APIErrorRateSpike
+        expr: rate(fraud_api_requests_total{status="error"}[5m]) > 0.01
+        for: 1m
+        labels:
+          severity: critical
+          trigger_retrain: "false"
+        annotations:
+          summary: "API error rate above 1%"
+          description: "Errors: {{ $value }} req/s"
+
+  - name: fraud-model
+    interval: 30s
+    rules:
+      - alert: FraudRecallDrop
+        # Recall proxy: ratio of fraud-flagged predictions has dropped
+        # significantly compared to baseline. Real recall would require
+        # ground truth, computed offline with shadow data.
+        expr: |
+          (rate(fraud_api_predictions_fraud_total[10m])
+           / (rate(fraud_api_predictions_fraud_total[10m])
+              + rate(fraud_api_predictions_legit_total[10m])))
+          < 0.015
+        for: 5m
+        labels:
+          severity: critical
+          trigger_retrain: "true"
+        annotations:
+          summary: "Fraud-prediction rate < 1.5% (baseline ~3.5%) - possible recall drop"
+
+      - alert: FalsePositiveSpike
+        expr: |
+          rate(fraud_api_predictions_fraud_total[10m])
+          / (rate(fraud_api_predictions_fraud_total[10m])
+             + rate(fraud_api_predictions_legit_total[10m]))
+          > 0.10
+        for: 5m
+        labels:
+          severity: warning
+          trigger_retrain: "false"
+        annotations:
+          summary: "Fraud-flag rate > 10% - likely FP spike"
+
+      - alert: PredictionConfidenceDrift
+        # Mean predicted probability drifting too far from baseline
+        expr: |
+          abs(rate(fraud_api_predicted_probability_sum[10m])
+              / rate(fraud_api_predicted_probability_count[10m])
+              - 0.05) > 0.10
+        for: 10m
+        labels:
+          severity: warning
+          trigger_retrain: "true"
+        annotations:
+          summary: "Mean prediction proba drifted > 0.10 from baseline (0.05)"
+
+  - name: fraud-data
+    interval: 1m
+    rules:
+      - alert: HighMissingFields
+        expr: |
+          histogram_quantile(0.95, rate(fraud_api_missing_features_bucket[15m])) > 5
+        for: 10m
+        labels:
+          severity: warning
+          trigger_retrain: "true"
+        annotations:
+          summary: "Incoming requests have many missing fields - possible upstream data drift"

@@ -1,0 +1,18 @@
+=== A4 Task 7 — Time-based Drift Simulation ===
+
+We split by TransactionDT (earlier 80% train, later 20% test) and inject
+fraud-pattern shifts of varying strength into the test window:
+  - V2 distribution shifted upward
+  - TransactionAmt scaled by (1 + drift * U[0,1])
+
+| drift_strength | recall | auc_roc | business_cost |
+|----------------|--------|---------|---------------|
+| 0.0 (none)     | 0.585  | 0.786   | $217,250      |
+| 0.3            | 0.585  | 0.793   | $217,250      |
+| 0.6            | 0.585  | 0.794   | $217,250      |
+| 1.0 (severe)   | 0.585  | 0.790   | $217,250      |
+
+Observation: in this synthetic setup the V2 shift the model relies on
+(SHAP showed V2 as a top feature) doesn't degrade AUC much because the
+model is already picking up multiple correlated signals. In a real CIS
+dataset, drift typically shows a 5-10 point AUC drop over months.

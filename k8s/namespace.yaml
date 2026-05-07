@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fraud-experiments
+  labels:
+    purpose: a4-fraud-detection
+    team: mlops

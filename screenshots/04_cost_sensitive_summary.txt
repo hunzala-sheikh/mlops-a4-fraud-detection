@@ -1,0 +1,15 @@
+=== A4 Task 4 — Cost-Sensitive Learning ===
+fraud_cost=$1000/case, fp_cost=$50/case, scale_pos_weight = base_ratio * fn_penalty
+
+| config        | TP  | FP   | FN  | recall | precision | fraud_loss | fa_cost  | TOTAL    |
+|---------------|-----|------|-----|--------|-----------|------------|----------|----------|
+| standard      | 315 |    6 | 200 | 0.612  | 0.983     | $200,000   | $300     | $200,300 |
+| cost_sens_x3  | 325 |  322 | 190 | 0.631  | 0.502     | $190,000   | $16,100  | $206,100 |
+| cost_sens_x5  | 332 |  800 | 183 | 0.645  | 0.293     | $183,000   | $40,000  | $223,000 |
+| cost_sens_x10 | 348 | 1827 | 167 | 0.676  | 0.160     | $167,000   | $91,350  | $258,350 |
+
+Business take-away: with fraud_cost / fp_cost = 20:1, the standard model
+already minimises total cost. cost_sens_x3 reduces fraud loss by $10k but
+incurs $15.8k more in false-alarm costs => net loss $5.8k. Higher
+penalties only help if fp_cost falls below ~$30/case (e.g., automated
+review pipelines vs human reviewers).

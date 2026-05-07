@@ -1,0 +1,30 @@
+# Alertmanager: fires webhooks to GitHub Actions repository_dispatch
+# when an alert with label trigger_retrain=true reaches firing state.
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default
+  group_by: [alertname, severity]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 1h
+  routes:
+    - matchers:
+        - trigger_retrain="true"
+      receiver: github-retrain
+
+receivers:
+  - name: default
+    webhook_configs:
+      - url: 'http://localhost:9999/null'  # placeholder
+        send_resolved: false
+
+  - name: github-retrain
+    webhook_configs:
+      - url: 'https://api.github.com/repos/i211779/mlops-a4-fraud/dispatches'
+        http_config:
+          authorization:
+            type: Bearer
+            credentials_file: /etc/alertmanager/github-token
+        send_resolved: false

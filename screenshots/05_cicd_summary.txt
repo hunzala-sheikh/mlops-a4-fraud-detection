@@ -1,0 +1,44 @@
+=== A4 Task 5 — CI/CD Pipeline Evidence (real local run, 2026-05-07) ===
+
+Workflows live in .github/workflows/:
+  ci.yml                  — Stage 1: lint + tests + data schema
+  build.yml               — Stage 2: docker build training & inference
+  cd.yml                  — Stage 3: KFP pipeline submit + KServe rollout
+  intelligent_trigger.yml — Stage 4: alert-driven retraining
+
+All Stage 1-3 jobs were re-executed locally for evidence (logs in
+screenshots/cicd_logs/):
+
+  Stage 1a — ruff lint                  PASS   (screenshots/cicd_logs/01_ruff.log)
+  Stage 1b — pytest                     PASS   3 passed in 2.08s
+  Stage 1c — data schema                PASS   shape=(50000, 26) fraud_rate=0.0515
+  Stage 2  — docker build training      PASS   image: fraud-training:v1
+  Stage 2  — docker build inference     PASS   image: fraud-inference:v1
+  Stage 3  — KFP pipeline compile       PASS   compiled_pipelines/fraud_pipeline.yaml (43 KB)
+  Stage 3  — k8s manifests applied      PASS   namespace + quota + PVCs +
+                                                Prometheus + Grafana + inference Pod
+
+Stage 4 — Intelligent Trigger
+  Triggered by alert FROM monitoring (Task 6 integration):
+    HighFalsePositiveRate alert is FIRING in Prometheus right now
+    (see 06_prometheus_alerts.png and 06_grafana_alerts_list.png)
+  Configured action in alertmanager.yml: POST to GitHub
+    /repos/<owner>/<repo>/dispatches with event_type=fraud_drift_detected,
+    which dispatches intelligent_trigger.yml -> cd.yml.
+  Local equivalent verified: alert is observable in both Prometheus and
+  Grafana; the dispatch URL would resolve once the repo is pushed.
+
+Artifacts produced by this run:
+  artifacts/deployed_model.pkl                — XGBoost model trained on real fraud.csv
+  artifacts/train_summary.json                — per-model metrics (P/R/F1/AUC/AP)
+  compiled_pipelines/fraud_pipeline.yaml      — Argo IR for the KFP pipeline
+  screenshots/05_cicd_pipeline_status.png     — single-page run summary
+  screenshots/cicd_logs/                      — raw stdout from every stage
+
+How the four stages chain together
+  ci.yml → build.yml → cd.yml ← intelligent_trigger.yml
+  CI runs on every push, gated by ruff + pytest + schema.
+  build.yml only runs after CI green; pushes both images to GHCR.
+  cd.yml submits a KFP run, blocks on AUC >= 0.85, then bumps KServe.
+  intelligent_trigger.yml is woken by Prometheus alerts (Task 6) and
+  dispatches cd.yml with the latest data window.

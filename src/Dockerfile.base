@@ -1,0 +1,19 @@
+FROM python:3.11-slim
+
+# Cap BLAS threads to 1 — avoids CPU thrashing when many pods run concurrently.
+ENV OMP_NUM_THREADS=1 \
+    MKL_NUM_THREADS=1 \
+    OPENBLAS_NUM_THREADS=1 \
+    NUMEXPR_NUM_THREADS=1
+
+RUN pip install --no-cache-dir \
+    'scikit-learn==1.5.2' \
+    'pandas==2.2.3' \
+    'numpy==1.26.4' \
+    'xgboost==2.0.3' \
+    'lightgbm==4.3.0' \
+    'imbalanced-learn==0.12.4' \
+    'shap==0.46.0' \
+    'matplotlib==3.9.2' \
+    'seaborn==0.13.2' \
+    'kfp==2.16.0'

@@ -1,0 +1,14 @@
+=== A4 Task 2 — Class Imbalance Comparison ===
+Strategies compared (XGBoost, fraud_rate=3.5%, fraud_cost=$1000/case, fp_cost=$50):
+
+| strategy     | recall | f1     | auc_roc | business_cost |
+|--------------|--------|--------|---------|---------------|
+| none         | 0.612  | 0.731  | 0.804   | $201,600      |
+| smote        | 0.602  | 0.710  | 0.798   | $207,400      |
+| undersample  | 0.612  | 0.716  | 0.803   | $202,500      |
+| class_weight | 0.612  | 0.726  | 0.812   | $201,900      |
+
+Key finding: class_weight gives the best AUC-ROC; SMOTE has the slightly
+worse recall on this dataset; baseline (none) is essentially tied with
+class_weight on cost. With 8% noise + 30% pure-noise fraud rows, no
+strategy reaches 100% recall - the irreducible error sets the floor.

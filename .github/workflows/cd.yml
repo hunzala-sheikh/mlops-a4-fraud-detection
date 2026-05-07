@@ -1,0 +1,60 @@
+name: CD - Continuous Deployment
+
+on:
+  workflow_run:
+    workflows: ["Build & Package"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      model_type:
+        description: 'Model to train and deploy'
+        required: false
+        default: 'xgboost'
+        type: choice
+        options: [xgboost, lightgbm, rf_fs]
+      auc_threshold:
+        description: 'AUC-ROC threshold for deployment'
+        required: false
+        default: '0.85'
+
+jobs:
+  trigger-kubeflow-training:
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install KFP client
+        run: pip install kfp==2.16.0
+
+      - name: Trigger fraud-pipeline run on KFP cluster
+        env:
+          KFP_HOST:        ${{ secrets.KFP_HOST }}
+          KFP_AUTH_TOKEN:  ${{ secrets.KFP_AUTH_TOKEN }}
+          MODEL_TYPE:      ${{ github.event.inputs.model_type || 'xgboost' }}
+          AUC_THRESHOLD:   ${{ github.event.inputs.auc_threshold || '0.85' }}
+        run: |
+          python ci_cd/trigger_kfp_run.py \
+            --host  "$KFP_HOST" \
+            --token "$KFP_AUTH_TOKEN" \
+            --model "$MODEL_TYPE" \
+            --auc-threshold "$AUC_THRESHOLD"
+
+      - name: Wait for run to finish + check AUC
+        env:
+          KFP_HOST: ${{ secrets.KFP_HOST }}
+        run: python ci_cd/wait_and_check_auc.py --host "$KFP_HOST"
+
+      - name: Update KServe InferenceService (model deploy)
+        if: success()
+        env:
+          MODEL_VERSION: ${{ github.sha }}
+        run: |
+          envsubst < k8s/inference_service.template.yaml > k8s/inference_service.yaml
+          kubectl apply -f k8s/inference_service.yaml -n fraud-experiments

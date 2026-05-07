@@ -1,0 +1,10 @@
+=== A4 Task 3 - Model complexity comparison (real run on fraud.csv) ===
+
+| model              | precision | recall | f1    | auc_roc | ap    |  TN  | FP | FN |  TP |
+|--------------------|-----------|--------|-------|---------|-------|------|----|----|-----|
+| XGBoost            | 0.897     | 0.612  | 0.727 | 0.799   | 0.600 | 9449 | 36 | 200 | 315 |
+| LightGBM           | 0.882     | 0.612  | 0.722 | 0.800   | 0.602 | 9443 | 42 | 200 | 315 |
+| RF + RFE (hybrid)  | 0.913     | 0.612  | 0.733 | 0.799   | 0.599 | 9455 | 30 | 200 | 315 |
+
+Confusion matrix is computed for the fraud class on the held-out 20% test
+split (n_test = 10000).

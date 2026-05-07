@@ -1,0 +1,92 @@
+{
+  "n_samples_explained": 5000,
+  "top_15_features": [
+    {
+      "feature": "TransactionID",
+      "mean_abs_shap": 0.8412142395973206
+    },
+    {
+      "feature": "V8",
+      "mean_abs_shap": 0.09543999284505844
+    },
+    {
+      "feature": "hour",
+      "mean_abs_shap": 0.09444049745798111
+    },
+    {
+      "feature": "V2",
+      "mean_abs_shap": 0.07495930045843124
+    },
+    {
+      "feature": "V10",
+      "mean_abs_shap": 0.06529500335454941
+    },
+    {
+      "feature": "V13",
+      "mean_abs_shap": 0.0637427568435669
+    },
+    {
+      "feature": "card2",
+      "mean_abs_shap": 0.061903271824121475
+    },
+    {
+      "feature": "V1",
+      "mean_abs_shap": 0.06110527366399765
+    },
+    {
+      "feature": "V12",
+      "mean_abs_shap": 0.05590604990720749
+    },
+    {
+      "feature": "V4",
+      "mean_abs_shap": 0.05289570987224579
+    },
+    {
+      "feature": "V11",
+      "mean_abs_shap": 0.05161314830183983
+    },
+    {
+      "feature": "V5",
+      "mean_abs_shap": 0.05135383829474449
+    },
+    {
+      "feature": "card1",
+      "mean_abs_shap": 0.0494142584502697
+    },
+    {
+      "feature": "V9",
+      "mean_abs_shap": 0.04302084818482399
+    },
+    {
+      "feature": "TransactionAmt",
+      "mean_abs_shap": 0.04102647677063942
+    }
+  ],
+  "highest_proba_row": {
+    "index": 28298,
+    "predicted_proba": 0.990051805973053,
+    "actual_label": 1,
+    "top_5_drivers": [
+      {
+        "feature": "TransactionID",
+        "shap_value": 6.364365577697754
+      },
+      {
+        "feature": "V10",
+        "shap_value": 0.24646317958831787
+      },
+      {
+        "feature": "card2",
+        "shap_value": 0.232198104262352
+      },
+      {
+        "feature": "addr1",
+        "shap_value": 0.1955839991569519
+      },
+      {
+        "feature": "card1",
+        "shap_value": 0.16919675469398499
+      }
+    ]
+  }
+}

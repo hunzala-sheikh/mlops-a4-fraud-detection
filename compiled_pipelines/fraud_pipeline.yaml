@@ -1,0 +1,926 @@
+# PIPELINE DEFINITION
+# Name: fraud-pipeline
+# Description: A4 — Fraud detection: 7 components, conditional deploy, retries
+# Inputs:
+#    auc_threshold: float [Default: 0.85]
+#    cost_sensitive: bool [Default: False]
+#    fn_penalty: float [Default: 5.0]
+#    imbalance_strategy: str [Default: 'class_weight']
+#    max_depth: int [Default: 6.0]
+#    model_type: str [Default: 'xgboost']
+#    n_estimators: int [Default: 200.0]
+#    random_state: int [Default: 42.0]
+#    test_size: float [Default: 0.2]
+#    time_based_split: bool [Default: False]
+components:
+  comp-condition-1:
+    dag:
+      tasks:
+        deploy-model:
+          cachingOptions:
+            enableCache: true
+          componentRef:
+            name: comp-deploy-model
+          inputs:
+            artifacts:
+              metrics:
+                componentInputArtifact: pipelinechannel--evaluate-model-metrics
+              model_in:
+                componentInputArtifact: pipelinechannel--train-model-model_out
+            parameters:
+              auc_threshold:
+                componentInputParameter: pipelinechannel--auc_threshold
+          taskInfo:
+            name: deploy-model
+    inputDefinitions:
+      artifacts:
+        pipelinechannel--evaluate-model-metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+        pipelinechannel--train-model-model_out:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        pipelinechannel--auc_threshold:
+          parameterType: NUMBER_DOUBLE
+        pipelinechannel--evaluate-model-Output:
+          parameterType: STRING
+  comp-deploy-model:
+    executorLabel: exec-deploy-model
+    inputDefinitions:
+      artifacts:
+        metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+        model_in:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        auc_threshold:
+          defaultValue: 0.85
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+    outputDefinitions:
+      artifacts:
+        deployed_marker:
+          artifactType:
+            schemaTitle: system.Artifact
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-evaluate-model:
+    executorLabel: exec-evaluate-model
+    inputDefinitions:
+      artifacts:
+        model_in:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+        test_fe:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        fp_cost_per_case:
+          defaultValue: 50.0
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+        fraud_cost_per_case:
+          defaultValue: 1000.0
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+    outputDefinitions:
+      artifacts:
+        classification_metrics:
+          artifactType:
+            schemaTitle: system.ClassificationMetrics
+            schemaVersion: 0.0.1
+        metrics:
+          artifactType:
+            schemaTitle: system.Metrics
+            schemaVersion: 0.0.1
+        report_html:
+          artifactType:
+            schemaTitle: system.HTML
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-feature-engineer:
+    executorLabel: exec-feature-engineer
+    inputDefinitions:
+      artifacts:
+        test_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        train_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+    outputDefinitions:
+      artifacts:
+        test_fe:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        train_fe:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-ingest-data:
+    executorLabel: exec-ingest-data
+    outputDefinitions:
+      artifacts:
+        raw_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-preprocess-data:
+    executorLabel: exec-preprocess-data
+    inputDefinitions:
+      artifacts:
+        validated:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        imbalance_strategy:
+          defaultValue: none
+          isOptional: true
+          parameterType: STRING
+        random_state:
+          defaultValue: 42.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        test_size:
+          defaultValue: 0.2
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+        time_based_split:
+          defaultValue: false
+          isOptional: true
+          parameterType: BOOLEAN
+    outputDefinitions:
+      artifacts:
+        test_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+        train_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-train-model:
+    executorLabel: exec-train-model
+    inputDefinitions:
+      artifacts:
+        train_fe:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        cost_sensitive:
+          defaultValue: false
+          isOptional: true
+          parameterType: BOOLEAN
+        fn_penalty:
+          defaultValue: 5.0
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+        max_depth:
+          defaultValue: 6.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        model_type:
+          defaultValue: xgboost
+          isOptional: true
+          parameterType: STRING
+        n_estimators:
+          defaultValue: 200.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+        random_state:
+          defaultValue: 42.0
+          isOptional: true
+          parameterType: NUMBER_INTEGER
+    outputDefinitions:
+      artifacts:
+        model_out:
+          artifactType:
+            schemaTitle: system.Model
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: STRING
+  comp-validate-data:
+    executorLabel: exec-validate-data
+    inputDefinitions:
+      artifacts:
+        raw_data:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        max_fraud_rate:
+          defaultValue: 0.2
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+        max_missing_pct:
+          defaultValue: 50.0
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+        min_fraud_rate:
+          defaultValue: 0.005
+          isOptional: true
+          parameterType: NUMBER_DOUBLE
+    outputDefinitions:
+      artifacts:
+        validated:
+          artifactType:
+            schemaTitle: system.Dataset
+            schemaVersion: 0.0.1
+      parameters:
+        Output:
+          parameterType: STRING
+deploymentSpec:
+  executors:
+    exec-deploy-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - deploy_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef deploy_model(\n    model_in: Input[Model],\n    metrics: Input[Metrics],\n\
+          \    deployed_marker: Output[Artifact],\n    auc_threshold: float = 0.85,\n\
+          ) -> str:\n    import json\n    import shutil\n    from pathlib import Path\n\
+          \n    # Read AUC from the metrics artifact (KFP writes a JSON file at metrics.path)\n\
+          \    try:\n        with open(metrics.path, \"r\") as f:\n            m =\
+          \ json.load(f)\n    except Exception:\n        m = {}\n    auc = float(m.get(\"\
+          auc_roc\", 0.0))\n\n    decision = \"deploy\" if auc >= auc_threshold else\
+          \ \"reject\"\n\n    out_dir = Path(deployed_marker.path).parent\n    out_dir.mkdir(parents=True,\
+          \ exist_ok=True)\n\n    if decision == \"deploy\":\n        # Copy the model\
+          \ file beside the marker (acts as \"deployed\" artifact)\n        target\
+          \ = out_dir / \"deployed_model.pkl\"\n        shutil.copyfile(model_in.path,\
+          \ target)\n        # Mock a registry-style version tag\n        with open(deployed_marker.path,\
+          \ \"w\") as f:\n            json.dump({\n                \"decision\": \"\
+          deploy\",\n                \"auc_roc\": auc,\n                \"threshold\"\
+          : auc_threshold,\n                \"model_path\": str(target),\n       \
+          \     }, f, indent=2)\n    else:\n        with open(deployed_marker.path,\
+          \ \"w\") as f:\n            json.dump({\n                \"decision\": \"\
+          reject\",\n                \"auc_roc\": auc,\n                \"threshold\"\
+          : auc_threshold,\n                \"reason\": f\"AUC {auc:.4f} below threshold\
+          \ {auc_threshold}\",\n            }, f, indent=2)\n\n    print(f\"[DEPLOY]\
+          \ {decision} (auc={auc:.4f}, threshold={auc_threshold})\")\n    return decision\n\
+          \n"
+        image: mlops-a4-base:v1
+    exec-evaluate-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - evaluate_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef evaluate_model(\n    test_fe: Input[Dataset],\n    model_in:\
+          \ Input[Model],\n    metrics: Output[Metrics],\n    classification_metrics:\
+          \ Output[ClassificationMetrics],\n    report_html: Output[HTML],\n    fraud_cost_per_case:\
+          \ float = 1000.0,    # avg loss when fraud is missed\n    fp_cost_per_case:\
+          \ float = 50.0,         # cost of a wrongly flagged transaction\n) -> str:\n\
+          \    import base64\n    import io\n    import json\n    import pickle\n\n\
+          \    import matplotlib\n    import numpy as np\n    import pandas as pd\n\
+          \    matplotlib.use(\"Agg\")\n    import matplotlib.pyplot as plt\n    import\
+          \ seaborn as sns\n    from sklearn.metrics import (\n        accuracy_score,\n\
+          \        average_precision_score,\n        confusion_matrix,\n        f1_score,\n\
+          \        precision_score,\n        recall_score,\n        roc_auc_score,\n\
+          \    )\n\n    df = pd.read_csv(test_fe.path)\n    y = df[\"isFraud\"].values.astype(int)\n\
+          \    X = df.drop(columns=[\"isFraud\"]).values\n    with open(model_in.path,\
+          \ \"rb\") as f:\n        bundle = pickle.load(f)\n    model = bundle[\"\
+          model\"]\n\n    proba = model.predict_proba(X)[:, 1]\n    pred = (proba\
+          \ >= 0.5).astype(int)\n\n    cm = confusion_matrix(y, pred)\n    tn, fp,\
+          \ fn, tp = cm.ravel() if cm.size == 4 else (0, 0, 0, 0)\n\n    scores =\
+          \ {\n        \"accuracy\":  float(accuracy_score(y, pred)),\n        \"\
+          precision\": float(precision_score(y, pred, zero_division=0)),\n       \
+          \ \"recall\":    float(recall_score(y, pred, zero_division=0)),\n      \
+          \  \"f1\":        float(f1_score(y, pred, zero_division=0)),\n        \"\
+          auc_roc\":   float(roc_auc_score(y, proba)) if len(np.unique(y)) > 1 else\
+          \ 0.0,\n        \"ap\":        float(average_precision_score(y, proba))\
+          \ if len(np.unique(y)) > 1 else 0.0,\n        \"tn\": int(tn), \"fp\": int(fp),\
+          \ \"fn\": int(fn), \"tp\": int(tp),\n        \"business_cost_usd\": float(fn\
+          \ * fraud_cost_per_case + fp * fp_cost_per_case),\n        \"fraud_loss_usd\"\
+          : float(fn * fraud_cost_per_case),\n        \"false_alarm_cost_usd\": float(fp\
+          \ * fp_cost_per_case),\n    }\n    for k, v in scores.items():\n       \
+          \ if isinstance(v, float):\n            metrics.log_metric(k, v)\n\n   \
+          \ # Confusion matrix artifact\n    if cm.size == 4:\n        classification_metrics.log_confusion_matrix([\"\
+          legit\", \"fraud\"], cm.tolist())\n\n    # Confusion matrix figure\n   \
+          \ fig, ax = plt.subplots(figsize=(4, 3.5))\n    sns.heatmap(cm, annot=True,\
+          \ fmt=\"d\", cmap=\"Reds\",\n                xticklabels=[\"legit\", \"\
+          fraud\"], yticklabels=[\"legit\", \"fraud\"], ax=ax)\n    ax.set_xlabel(\"\
+          Predicted\"); ax.set_ylabel(\"True\")\n    ax.set_title(f\"Confusion Matrix\
+          \ - {bundle.get('model_type', '?')}\")\n    buf = io.BytesIO(); fig.tight_layout();\
+          \ fig.savefig(buf, format=\"png\", dpi=120); plt.close(fig)\n    png_b64\
+          \ = base64.b64encode(buf.getvalue()).decode(\"ascii\")\n\n    html = (\n\
+          \        f\"<!doctype html><html><body style='font-family:sans-serif'>\"\
+          \n        f\"<h2>Fraud-detection Eval -- {bundle.get('model_type','?')}\
+          \ \"\n        f\"{'(cost-sensitive)' if bundle.get('cost_sensitive') else\
+          \ '(standard)'}</h2>\"\n        f\"<p><b>Hyperparams:</b> {bundle.get('params')}</p>\"\
+          \n        f\"<table border='1' cellpadding='6' style='border-collapse:collapse'>\"\
+          \n        + \"\".join(f\"<tr><td><b>{k}</b></td><td>{v:.4f}</td></tr>\"\
+          \ if isinstance(v, float)\n                  else f\"<tr><td><b>{k}</b></td><td>{v}</td></tr>\"\
+          \ for k, v in scores.items())\n        + f\"</table><br/><img src='data:image/png;base64,{png_b64}'/>\"\
+          \n          f\"<p><b>Business cost:</b> ${scores['business_cost_usd']:.2f}\
+          \ \"\n          f\"(fraud_loss={scores['fraud_loss_usd']:.2f} + \"\n   \
+          \       f\"false_alarm={scores['false_alarm_cost_usd']:.2f})</p>\"\n   \
+          \       f\"</body></html>\"\n    )\n    with open(report_html.path, \"w\"\
+          ) as f:\n        f.write(html)\n\n    print(f\"[EVAL] {json.dumps(scores)}\"\
+          )\n    return json.dumps(scores)\n\n"
+        image: mlops-a4-base:v1
+    exec-feature-engineer:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - feature_engineer
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef feature_engineer(\n    train_data: Input[Dataset],\n    test_data:\
+          \ Input[Dataset],\n    train_fe: Output[Dataset],\n    test_fe: Output[Dataset],\n\
+          ) -> str:\n    import json\n\n    import numpy as np\n    import pandas\
+          \ as pd\n\n    train = pd.read_csv(train_data.path)\n    test = pd.read_csv(test_data.path)\n\
+          \n    def _add_features(df):\n        if \"TransactionAmt\" in df.columns:\n\
+          \            df[\"amt_log\"] = np.log1p(df[\"TransactionAmt\"])\n      \
+          \      df[\"amt_zscore\"] = (df[\"TransactionAmt\"] - df[\"TransactionAmt\"\
+          ].mean()) / df[\"TransactionAmt\"].std()\n        if \"TransactionDT\" in\
+          \ df.columns:\n            df[\"hour\"] = (df[\"TransactionDT\"] // 3600)\
+          \ % 24\n            df[\"day\"] = (df[\"TransactionDT\"] // 86400)\n   \
+          \     return df\n\n    train = _add_features(train)\n    test = _add_features(test)\n\
+          \n    # card1 mean amount (computed from train, applied to test)\n    if\
+          \ \"card1\" in train.columns and \"TransactionAmt\" in train.columns:\n\
+          \        card1_mean_amt = train.groupby(\"card1\")[\"TransactionAmt\"].mean().to_dict()\n\
+          \        global_mean = train[\"TransactionAmt\"].mean()\n        train[\"\
+          card1_mean_amt\"] = train[\"card1\"].map(card1_mean_amt).fillna(global_mean)\n\
+          \        test[\"card1_mean_amt\"] = test[\"card1\"].map(card1_mean_amt).fillna(global_mean)\n\
+          \n    train.to_csv(train_fe.path, index=False)\n    test.to_csv(test_fe.path,\
+          \ index=False)\n\n    summary = {\n        \"n_train\": int(len(train)),\n\
+          \        \"n_test\": int(len(test)),\n        \"added_features\": [c for\
+          \ c in train.columns if c in\n                           (\"amt_log\", \"\
+          amt_zscore\", \"hour\", \"day\", \"card1_mean_amt\")],\n        \"n_features\"\
+          : int(train.shape[1] - 1),  # minus isFraud\n    }\n    print(f\"[FE] {summary}\"\
+          )\n    return json.dumps(summary)\n\n"
+        image: mlops-a4-base:v1
+    exec-ingest-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - ingest_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef ingest_data(raw_data: Output[Dataset]) -> str:\n    \"\"\"Load\
+          \ fraud CSV. If not present, regenerate from seed.\"\"\"\n    import json\n\
+          \    from pathlib import Path\n\n    import numpy as np\n    import pandas\
+          \ as pd\n\n    candidates = [\"/data/fraud.csv\", \"/mnt/data/fraud.csv\"\
+          , \"data/fraud.csv\"]\n    src = next((p for p in candidates if Path(p).exists()),\
+          \ None)\n\n    if src is None:\n        # Inline generator \u2014 synthetic\
+          \ dataset that mimics IEEE CIS structure\n        rng = np.random.default_rng(42)\n\
+          \        n_rows, fraud_rate = 50_000, 0.035\n        n_fraud = int(n_rows\
+          \ * fraud_rate)\n        n_legit = n_rows - n_fraud\n\n        def _block(n,\
+          \ base, shift_v):\n            d = pd.DataFrame({\n                \"TransactionID\"\
+          : np.arange(n) + base,\n                \"TransactionDT\": rng.integers(86_400,\
+          \ 86_400 * 180, size=n),\n                \"TransactionAmt\": np.exp(rng.normal(3.5\
+          \ + shift_v * 0.7, 1.0, n)).round(2),\n                \"ProductCD\": rng.choice([\"\
+          W\", \"C\", \"R\", \"H\", \"S\"], n),\n                \"card1\": rng.integers(1,\
+          \ 18000, n),\n                \"card4\": rng.choice([\"visa\", \"mastercard\"\
+          , \"discover\", \"amex\", np.nan], n),\n                \"card6\": rng.choice([\"\
+          debit\", \"credit\", np.nan], n),\n                \"P_emaildomain\": rng.choice(\n\
+          \                    [\"gmail.com\", \"yahoo.com\", \"hotmail.com\", \"\
+          anonymous.com\", np.nan], n),\n                \"DeviceType\": rng.choice([\"\
+          mobile\", \"desktop\", np.nan], n),\n            })\n            for i in\
+          \ range(1, 15):\n                col = rng.normal(shift_v * (i % 3 - 1)\
+          \ * 0.6, 1.0 + shift_v * 0.1, n)\n                col[rng.random(n) < 0.05\
+          \ + shift_v * 0.03] = np.nan\n                d[f\"V{i}\"] = col\n     \
+          \       d[\"isFraud\"] = int(shift_v > 0)\n            return d\n\n    \
+          \    df = pd.concat([_block(n_legit, 1_000_000, 0.0),\n                \
+          \        _block(n_fraud, 2_000_000, 1.0)], ignore_index=True)\n        df\
+          \ = df.sample(frac=1.0, random_state=42).reset_index(drop=True)\n    else:\n\
+          \        df = pd.read_csv(src)\n\n    df.to_csv(raw_data.path, index=False)\n\
+          \    summary = {\n        \"n_rows\": int(len(df)),\n        \"n_cols\"\
+          : int(df.shape[1]),\n        \"fraud_rate\": float(df[\"isFraud\"].mean()),\n\
+          \        \"missing_total\": int(df.isna().sum().sum()),\n    }\n    print(f\"\
+          [INGEST] {summary}\")\n    return json.dumps(summary)\n\n"
+        image: mlops-a4-base:v1
+    exec-preprocess-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - preprocess_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef preprocess_data(\n    validated: Input[Dataset],\n    train_data:\
+          \ Output[Dataset],\n    test_data: Output[Dataset],\n    test_size: float\
+          \ = 0.2,\n    imbalance_strategy: str = \"none\",  # none | smote | undersample\
+          \ | class_weight\n    random_state: int = 42,\n    time_based_split: bool\
+          \ = False,    # if True, train on earlier TransactionDT\n) -> str:\n   \
+          \ import json\n\n    import numpy as np\n    import pandas as pd\n    from\
+          \ sklearn.model_selection import train_test_split\n\n    df = pd.read_csv(validated.path)\n\
+          \    y = df[\"isFraud\"].values.astype(int)\n    X = df.drop(columns=[\"\
+          isFraud\"]).copy()\n\n    # ---------- impute ----------\n    num_cols =\
+          \ X.select_dtypes(include=[np.number]).columns.tolist()\n    cat_cols =\
+          \ X.select_dtypes(include=[\"object\"]).columns.tolist()\n    for c in num_cols:\n\
+          \        X[c] = X[c].fillna(X[c].median())\n    for c in cat_cols:\n   \
+          \     X[c] = X[c].fillna(X[c].mode().iloc[0] if not X[c].mode().empty else\
+          \ \"MISSING\")\n\n    # ---------- target encoding for high-cardinality\
+          \ ----------\n    high_card = [c for c in cat_cols if X[c].nunique() > 30]\n\
+          \    low_card = [c for c in cat_cols if c not in high_card]\n    for c in\
+          \ high_card:\n        # smoothed target encoding: (sum + alpha*global) /\
+          \ (count + alpha)\n        global_mean = y.mean()\n        alpha = 10.0\n\
+          \        agg = pd.DataFrame({\"y\": y, \"x\": X[c].values}).groupby(\"x\"\
+          )[\"y\"].agg([\"sum\", \"count\"])\n        enc = (agg[\"sum\"] + alpha\
+          \ * global_mean) / (agg[\"count\"] + alpha)\n        X[c + \"_te\"] = X[c].map(enc).fillna(global_mean)\n\
+          \        X = X.drop(columns=[c])\n\n    # ---------- one-hot for low-card\
+          \ ----------\n    if low_card:\n        X = pd.get_dummies(X, columns=low_card,\
+          \ dummy_na=False, drop_first=True)\n\n    # ---------- split ----------\n\
+          \    if time_based_split and \"TransactionDT\" in X.columns:\n        #\
+          \ earlier 1 - test_size for train\n        order = X[\"TransactionDT\"].argsort().values\n\
+          \        cut = int(len(X) * (1 - test_size))\n        train_idx, test_idx\
+          \ = order[:cut], order[cut:]\n        X_train, X_test = X.iloc[train_idx],\
+          \ X.iloc[test_idx]\n        y_train, y_test = y[train_idx], y[test_idx]\n\
+          \    else:\n        X_train, X_test, y_train, y_test = train_test_split(\n\
+          \            X, y, test_size=test_size, random_state=random_state, stratify=y\n\
+          \        )\n\n    # ---------- imbalance handling ----------\n    if imbalance_strategy\
+          \ == \"smote\":\n        from imblearn.over_sampling import SMOTE\n    \
+          \    # SMOTE only on training\n        X_train_np = X_train.select_dtypes(include=[np.number]).values\n\
+          \        feat_cols = X_train.select_dtypes(include=[np.number]).columns\n\
+          \        sm = SMOTE(random_state=random_state, sampling_strategy=0.30) \
+          \ # raise minority to 30%\n        X_train_res, y_train = sm.fit_resample(X_train_np,\
+          \ y_train)\n        X_train = pd.DataFrame(X_train_res, columns=feat_cols)\n\
+          \        # recompute X_test with same numeric cols\n        X_test = X_test[feat_cols]\n\
+          \    elif imbalance_strategy == \"undersample\":\n        from imblearn.under_sampling\
+          \ import RandomUnderSampler\n        rus = RandomUnderSampler(random_state=random_state,\
+          \ sampling_strategy=0.30)\n        X_train_np = X_train.select_dtypes(include=[np.number]).values\n\
+          \        feat_cols = X_train.select_dtypes(include=[np.number]).columns\n\
+          \        X_train_res, y_train = rus.fit_resample(X_train_np, y_train)\n\
+          \        X_train = pd.DataFrame(X_train_res, columns=feat_cols)\n      \
+          \  X_test = X_test[feat_cols]\n    elif imbalance_strategy == \"class_weight\"\
+          :\n        # No resampling \u2014 weight is applied in training step\n \
+          \       X_train = X_train.select_dtypes(include=[np.number])\n        X_test\
+          \ = X_test[X_train.columns]\n    else:\n        X_train = X_train.select_dtypes(include=[np.number])\n\
+          \        X_test = X_test[X_train.columns]\n\n    # ---------- write artifacts\
+          \ ----------\n    pd.concat([X_train.reset_index(drop=True),\n         \
+          \      pd.Series(y_train, name=\"isFraud\").reset_index(drop=True)], axis=1)\
+          \ \\\n      .to_csv(train_data.path, index=False)\n    pd.concat([X_test.reset_index(drop=True),\n\
+          \               pd.Series(y_test, name=\"isFraud\").reset_index(drop=True)],\
+          \ axis=1) \\\n      .to_csv(test_data.path, index=False)\n\n    summary\
+          \ = {\n        \"imbalance_strategy\": imbalance_strategy,\n        \"n_train\"\
+          : int(len(X_train)),\n        \"n_test\": int(len(X_test)),\n        \"\
+          n_features\": int(X_train.shape[1]),\n        \"train_fraud_rate\": float(np.mean(y_train)),\n\
+          \        \"test_fraud_rate\": float(np.mean(y_test)),\n        \"high_card_target_encoded\"\
+          : high_card,\n    }\n    print(f\"[PREPROCESS] {summary}\")\n    return\
+          \ json.dumps(summary)\n\n"
+        image: mlops-a4-base:v1
+    exec-train-model:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - train_model
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef train_model(\n    train_fe: Input[Dataset],\n    model_out: Output[Model],\n\
+          \    model_type: str = \"xgboost\",\n    cost_sensitive: bool = False,\n\
+          \    fn_penalty: float = 5.0,\n    n_estimators: int = 200,\n    max_depth:\
+          \ int = 6,\n    random_state: int = 42,\n) -> str:\n    import json\n  \
+          \  import pickle  # standard for sklearn model serialization\n\n    import\
+          \ pandas as pd\n\n    df = pd.read_csv(train_fe.path)\n    y = df[\"isFraud\"\
+          ].values.astype(int)\n    X = df.drop(columns=[\"isFraud\"]).values\n\n\
+          \    pos = max(int(y.sum()), 1)\n    neg = len(y) - pos\n    base_pos_weight\
+          \ = neg / pos\n    pos_weight = base_pos_weight * fn_penalty if cost_sensitive\
+          \ else 1.0\n\n    if model_type == \"xgboost\":\n        from xgboost import\
+          \ XGBClassifier\n        model = XGBClassifier(\n            n_estimators=n_estimators,\
+          \ max_depth=max_depth,\n            learning_rate=0.1, random_state=random_state,\
+          \ n_jobs=1,\n            scale_pos_weight=pos_weight, eval_metric=\"auc\"\
+          ,\n            tree_method=\"hist\",\n        ).fit(X, y)\n        params\
+          \ = {\"n_estimators\": n_estimators, \"max_depth\": max_depth,\n       \
+          \           \"learning_rate\": 0.1, \"scale_pos_weight\": float(pos_weight)}\n\
+          \    elif model_type == \"lightgbm\":\n        from lightgbm import LGBMClassifier\n\
+          \        model = LGBMClassifier(\n            n_estimators=n_estimators,\
+          \ max_depth=max_depth,\n            learning_rate=0.05, random_state=random_state,\
+          \ n_jobs=1,\n            scale_pos_weight=pos_weight,\n            verbose=-1,\n\
+          \        ).fit(X, y)\n        params = {\"n_estimators\": n_estimators,\
+          \ \"max_depth\": max_depth,\n                  \"learning_rate\": 0.05,\
+          \ \"scale_pos_weight\": float(pos_weight)}\n    elif model_type == \"rf_fs\"\
+          :\n        from sklearn.ensemble import RandomForestClassifier\n       \
+          \ from sklearn.feature_selection import RFE\n        base = RandomForestClassifier(n_estimators=50,\
+          \ random_state=random_state, n_jobs=1)\n        n_keep = min(20, X.shape[1])\n\
+          \        sel = RFE(base, n_features_to_select=n_keep).fit(X, y)\n      \
+          \  X_sel = sel.transform(X)\n        cw = {0: 1.0, 1: float(pos_weight)}\
+          \ if cost_sensitive else \"balanced\"\n        model_final = RandomForestClassifier(\n\
+          \            n_estimators=n_estimators, max_depth=max_depth,\n         \
+          \   random_state=random_state, n_jobs=1,\n            class_weight=cw,\n\
+          \        ).fit(X_sel, y)\n\n        class _RFEPipeline:\n            def\
+          \ __init__(self, sel, model): self.sel, self.model = sel, model\n      \
+          \      def predict(self, X): return self.model.predict(self.sel.transform(X))\n\
+          \            def predict_proba(self, X): return self.model.predict_proba(self.sel.transform(X))\n\
+          \        model = _RFEPipeline(sel, model_final)\n        params = {\"n_estimators\"\
+          : n_estimators, \"max_depth\": max_depth,\n                  \"n_features_selected\"\
+          : int(n_keep), \"class_weight\": str(cw)}\n    else:\n        raise ValueError(f\"\
+          Unknown model_type: {model_type}\")\n\n    bundle = {\n        \"model\"\
+          : model,\n        \"model_type\": model_type,\n        \"cost_sensitive\"\
+          : cost_sensitive,\n        \"fn_penalty\": float(fn_penalty),\n        \"\
+          params\": params,\n    }\n    with open(model_out.path, \"wb\") as f:\n\
+          \        pickle.dump(bundle, f)\n\n    summary = {**params, \"model_type\"\
+          : model_type, \"cost_sensitive\": cost_sensitive,\n               \"n_train\"\
+          : int(len(y)), \"train_fraud_rate\": float(y.mean())}\n    print(f\"[TRAIN]\
+          \ {summary}\")\n    return json.dumps(summary)\n\n"
+        image: mlops-a4-base:v1
+    exec-validate-data:
+      container:
+        args:
+        - --executor_input
+        - '{{$}}'
+        - --function_to_execute
+        - validate_data
+        command:
+        - sh
+        - -c
+        - "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip ||\
+          \ python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1\
+          \ python3 -m pip install --quiet --no-warn-script-location 'kfp==2.16.0'\
+          \ '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"\
+          $0\" \"$@\"\n"
+        - sh
+        - -ec
+        - 'program_path=$(mktemp -d)
+
+
+          printf "%s" "$0" > "$program_path/ephemeral_component.py"
+
+          _KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+
+          '
+        - "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import\
+          \ *\n\ndef validate_data(\n    raw_data: Input[Dataset],\n    validated:\
+          \ Output[Dataset],\n    max_missing_pct: float = 50.0,\n    min_fraud_rate:\
+          \ float = 0.005,\n    max_fraud_rate: float = 0.20,\n) -> str:\n    import\
+          \ json\n\n    import pandas as pd\n\n    df = pd.read_csv(raw_data.path)\n\
+          \n    # Schema: required columns\n    required = {\"TransactionID\", \"\
+          TransactionAmt\", \"isFraud\"}\n    missing_cols = required - set(df.columns)\n\
+          \    if missing_cols:\n        raise RuntimeError(f\"[VALIDATE] schema mismatch:\
+          \ missing {missing_cols}\")\n\n    # Per-column missing %\n    miss_pct\
+          \ = (df.isna().mean() * 100).round(2).to_dict()\n    bad = {k: v for k,\
+          \ v in miss_pct.items() if v > max_missing_pct}\n    if bad:\n        raise\
+          \ RuntimeError(f\"[VALIDATE] columns over {max_missing_pct}% missing: {bad}\"\
+          )\n\n    # Fraud rate sanity\n    fr = df[\"isFraud\"].mean()\n    if not\
+          \ (min_fraud_rate <= fr <= max_fraud_rate):\n        raise RuntimeError(f\"\
+          [VALIDATE] fraud_rate {fr:.4f} outside [{min_fraud_rate}, {max_fraud_rate}]\"\
+          )\n\n    df.to_csv(validated.path, index=False)\n    report = {\"n_rows\"\
+          : len(df), \"fraud_rate\": float(fr), \"max_missing_col_pct\": float(max(miss_pct.values()))}\n\
+          \    print(f\"[VALIDATE] OK: {report}\")\n    return json.dumps(report)\n\
+          \n"
+        image: mlops-a4-base:v1
+pipelineInfo:
+  description: "A4 \u2014 Fraud detection: 7 components, conditional deploy, retries"
+  name: fraud-pipeline
+root:
+  dag:
+    tasks:
+      condition-1:
+        componentRef:
+          name: comp-condition-1
+        dependentTasks:
+        - evaluate-model
+        - train-model
+        inputs:
+          artifacts:
+            pipelinechannel--evaluate-model-metrics:
+              taskOutputArtifact:
+                outputArtifactKey: metrics
+                producerTask: evaluate-model
+            pipelinechannel--train-model-model_out:
+              taskOutputArtifact:
+                outputArtifactKey: model_out
+                producerTask: train-model
+          parameters:
+            pipelinechannel--auc_threshold:
+              componentInputParameter: auc_threshold
+            pipelinechannel--evaluate-model-Output:
+              taskOutputParameter:
+                outputParameterKey: Output
+                producerTask: evaluate-model
+        taskInfo:
+          name: condition-1
+        triggerPolicy:
+          condition: inputs.parameter_values['pipelinechannel--evaluate-model-Output']
+            != 'skip_deploy'
+      evaluate-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-evaluate-model
+        dependentTasks:
+        - feature-engineer
+        - train-model
+        inputs:
+          artifacts:
+            model_in:
+              taskOutputArtifact:
+                outputArtifactKey: model_out
+                producerTask: train-model
+            test_fe:
+              taskOutputArtifact:
+                outputArtifactKey: test_fe
+                producerTask: feature-engineer
+        retryPolicy:
+          backoffDuration: 0s
+          backoffFactor: 2.0
+          backoffMaxDuration: 3600s
+          maxRetryCount: 1
+        taskInfo:
+          name: evaluate-model
+      feature-engineer:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-feature-engineer
+        dependentTasks:
+        - preprocess-data
+        inputs:
+          artifacts:
+            test_data:
+              taskOutputArtifact:
+                outputArtifactKey: test_data
+                producerTask: preprocess-data
+            train_data:
+              taskOutputArtifact:
+                outputArtifactKey: train_data
+                producerTask: preprocess-data
+        retryPolicy:
+          backoffDuration: 0s
+          backoffFactor: 2.0
+          backoffMaxDuration: 3600s
+          maxRetryCount: 2
+        taskInfo:
+          name: feature-engineer
+      ingest-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-ingest-data
+        retryPolicy:
+          backoffDuration: 0s
+          backoffFactor: 2.0
+          backoffMaxDuration: 3600s
+          maxRetryCount: 2
+        taskInfo:
+          name: ingest-data
+      preprocess-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-preprocess-data
+        dependentTasks:
+        - validate-data
+        inputs:
+          artifacts:
+            validated:
+              taskOutputArtifact:
+                outputArtifactKey: validated
+                producerTask: validate-data
+          parameters:
+            imbalance_strategy:
+              componentInputParameter: imbalance_strategy
+            random_state:
+              componentInputParameter: random_state
+            test_size:
+              componentInputParameter: test_size
+            time_based_split:
+              componentInputParameter: time_based_split
+        retryPolicy:
+          backoffDuration: 0s
+          backoffFactor: 2.0
+          backoffMaxDuration: 3600s
+          maxRetryCount: 2
+        taskInfo:
+          name: preprocess-data
+      train-model:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-train-model
+        dependentTasks:
+        - feature-engineer
+        inputs:
+          artifacts:
+            train_fe:
+              taskOutputArtifact:
+                outputArtifactKey: train_fe
+                producerTask: feature-engineer
+          parameters:
+            cost_sensitive:
+              componentInputParameter: cost_sensitive
+            fn_penalty:
+              componentInputParameter: fn_penalty
+            max_depth:
+              componentInputParameter: max_depth
+            model_type:
+              componentInputParameter: model_type
+            n_estimators:
+              componentInputParameter: n_estimators
+            random_state:
+              componentInputParameter: random_state
+        retryPolicy:
+          backoffDuration: 0s
+          backoffFactor: 2.0
+          backoffMaxDuration: 3600s
+          maxRetryCount: 2
+        taskInfo:
+          name: train-model
+      validate-data:
+        cachingOptions:
+          enableCache: true
+        componentRef:
+          name: comp-validate-data
+        dependentTasks:
+        - ingest-data
+        inputs:
+          artifacts:
+            raw_data:
+              taskOutputArtifact:
+                outputArtifactKey: raw_data
+                producerTask: ingest-data
+        retryPolicy:
+          backoffDuration: 0s
+          backoffFactor: 2.0
+          backoffMaxDuration: 3600s
+          maxRetryCount: 2
+        taskInfo:
+          name: validate-data
+  inputDefinitions:
+    parameters:
+      auc_threshold:
+        defaultValue: 0.85
+        isOptional: true
+        parameterType: NUMBER_DOUBLE
+      cost_sensitive:
+        defaultValue: false
+        isOptional: true
+        parameterType: BOOLEAN
+      fn_penalty:
+        defaultValue: 5.0
+        isOptional: true
+        parameterType: NUMBER_DOUBLE
+      imbalance_strategy:
+        defaultValue: class_weight
+        isOptional: true
+        parameterType: STRING
+      max_depth:
+        defaultValue: 6.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      model_type:
+        defaultValue: xgboost
+        isOptional: true
+        parameterType: STRING
+      n_estimators:
+        defaultValue: 200.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      random_state:
+        defaultValue: 42.0
+        isOptional: true
+        parameterType: NUMBER_INTEGER
+      test_size:
+        defaultValue: 0.2
+        isOptional: true
+        parameterType: NUMBER_DOUBLE
+      time_based_split:
+        defaultValue: false
+        isOptional: true
+        parameterType: BOOLEAN
+schemaVersion: 2.1.0
+sdkVersion: kfp-2.16.0
