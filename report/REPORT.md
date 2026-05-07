@@ -139,14 +139,34 @@ Stages 1 – 3 were fully re-executed locally for this submission; the
 * `04_docker_build_training.log` — `fraud-training:v1` built into minikube
 * `06_kfp_compile.log` — `compiled_pipelines/fraud_pipeline.yaml` (43 KB)
 
+The repo (https://github.com/hunzala-sheikh/mlops-a4-fraud-detection) was
+also pushed and the workflows actually ran on the GitHub Actions runners:
+
+| Workflow                | Trigger          | Result      | Duration |
+|-------------------------|------------------|-------------|----------|
+| CI - Continuous Integration | `push`       | PASS Success  | 1m 16s   |
+| Build & Package          | `push`           | PASS Success  | 2m 32s   |
+| CD - Continuous Deployment | `workflow_run` | FAIL (needs live K8s) | — |
+| Intelligent Trigger - Auto-Retrain | `workflow_dispatch` | FAIL (depends on CD) | — |
+
+The CI run lints (ruff), runs every test, validates the dataset schema,
+and uploads a coverage report — every step green. The Build run
+matrix-builds both `fraud-training` and `fraud-inference` images and
+pushes them to GHCR. CD/intelligent_trigger only fail because no real
+Kubernetes cluster is reachable from a stock GitHub runner; the local
+minikube run (Task 6 evidence) covers that path.
+
 Stage 4 is wired through `prometheus/alertmanager.yml`: when a Prometheus
 alert with `trigger_retrain="true"` fires (currently
 `HighFalsePositiveRate` is firing — see Task 6 evidence), Alertmanager
 posts a `repository_dispatch` to GitHub which invokes
 `intelligent_trigger.yml` → `cd.yml`.
 
-> Evidence: `screenshots/05_cicd_pipeline_status.png` (all-stages summary),
-> `screenshots/05_cicd_summary.txt`, `screenshots/cicd_logs/`.
+> Evidence: `screenshots/05_github_actions_list.png`,
+> `05_github_actions_ci_run.png`, `05_github_actions_ci_steps.png`
+> (every CI step green), `05_github_actions_build_run.png` (Success
+> 2m 32s, 2 jobs, 2 artifacts), `05_github_packages.png`,
+> `05_cicd_summary.txt`, `screenshots/cicd_logs/`.
 
 ---
 
